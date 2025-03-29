@@ -3,52 +3,71 @@ package com.breakmymovie.movie.controller;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
+import java.util.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
-
 import com.breakmymovie.movie.beans.MoviesInitializer;
 import com.breakmymovie.movie.models.MovieDetailsDTO;
+import com.breakmymovie.movie.rabbitmq.MessageQueueProducer;
 import com.breakmymovie.movie.service.FileProcessingService_IF;
-import com.breakmymovie.movie.serviceImpl.FileProcessingService;
-
+import org.springframework.web.bind.annotation.CrossOrigin;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import ws.schild.jave.EncoderException;
 import ws.schild.jave.InputFormatException;
 
 @RestController
+@CrossOrigin(origins = "http://localhost:3000")
 public class MovieDownloaderController {
 
 	@Autowired
 	FileProcessingService_IF fileProcessingService;
-	
+
+	@Autowired
+	MessageQueueProducer messageQueueProducer;
+
 	@Autowired
 	MoviesInitializer mv;
 
-	@GetMapping("/searchMovie/{movieName}")
-	public String searchMovie(@PathVariable("movieName") String movieName) {
+	@PostMapping("/searchMovie")
+	public List<String> searchMovie(@RequestBody MovieDetailsDTO moviesDetails) {
 		List<String> returnMovies = mv.returnMovies();
 
-		for (String movie : returnMovies) {
-			if (movie.toLowerCase().contains(movieName.toLowerCase()))
-				return movie;
+		if (moviesDetails.getSourceVideoName() == null || moviesDetails.getSourceVideoName().isEmpty()) {
+			return returnMovies;
 		}
 
-		return "No movie present with this name";
+		for (String movie : returnMovies) {
+			if (movie.toLowerCase().contains(moviesDetails.getSourceVideoName().toLowerCase()))
+				return Arrays.asList(movie);
+			;
+		}
+
+		return null;
 	}
 
-	@GetMapping("/downloadChunk/{movieName}/{movieChunk}")
-	public void downloadChunks(@PathVariable("movieChunk") String movieChunk,
-			@PathVariable("movieName") String movieName, HttpServletResponse response)
+	@GetMapping("/getAllChunksForMovie/{movieName}")
+	public List<String> getMovieChunks(@PathVariable("movieName") String movieName, HttpServletResponse response)
 			throws FileNotFoundException, IOException {
 
-		File file = new File(
-				"C:/Users/hasingh/Desktop/movieChunks/" + File.separator + movieName + File.separator + movieChunk);
+		File file = new File("C:/Users/hasingh/Desktop/movieChunks/" + File.separator + movieName);
+
+		List<String> allChunks = fileProcessingService.getAllChunks(file);
+
+		return allChunks;
+
+	}
+
+	@PostMapping("/downloadChunk")
+	public void downloadChunks(@RequestBody Map<String, String> chunkDetails, HttpServletResponse response)
+			throws FileNotFoundException, IOException {
+
+		File file = new File("C:/Users/hasingh/Desktop/movieChunks/" + File.separator + chunkDetails.get("movieName")
+				+ File.separator + chunkDetails.get("movieChunk"));
 
 		fileProcessingService.downloadChunks(file, response);
 
@@ -62,18 +81,9 @@ public class MovieDownloaderController {
 	}
 
 	@GetMapping("/splitFiles/")
-	public CompletableFuture<Void> splitFile(@RequestBody MovieDetailsDTO moviesDetails, HttpServletRequest request)
+	public void splitFile(@RequestBody MovieDetailsDTO moviesDetails, HttpServletRequest request)
 			throws IOException, IllegalArgumentException, InputFormatException, EncoderException {
-
-		CompletableFuture<Void> runAsync = CompletableFuture.runAsync(() -> {
-			try {
-				fileProcessingService.breakFileAndSaveIt(moviesDetails.getSourceVideoName(), request);
-			} catch (Exception e) {
-				System.out.println(e);
-			}
-		});
-
-		return runAsync;
+		messageQueueProducer.sendMessage(moviesDetails, request);
 
 	}
 }

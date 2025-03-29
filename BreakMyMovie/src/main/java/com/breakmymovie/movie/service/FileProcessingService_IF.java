@@ -5,6 +5,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.List;
 
+import com.breakmymovie.movie.models.MovieDetailsDTO;
+
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import ws.schild.jave.EncoderException;
@@ -15,6 +17,8 @@ public interface FileProcessingService_IF {
 
 	public boolean deleteDirectory(File dir);
 
-	public List<String> breakFileAndSaveIt(String actualMovieName, HttpServletRequest request)
-			throws InputFormatException, EncoderException;
+	public List<String> breakFileAndSaveIt(MovieDetailsDTO moviesDetails, HttpServletRequest request)
+			throws InputFormatException, EncoderException, IOException;
+	
+	public List<String> getAllChunks(File file);
 }

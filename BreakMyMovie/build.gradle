@@ -22,6 +22,7 @@ dependencies {
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 	implementation 'ws.schild:jave-core:3.5.0'
+	implementation 'org.springframework.boot:spring-boot-starter-amqp:3.4.4'
 }
 
 tasks.named('test') {

@@ -1,6 +1,5 @@
 package com.breakmymovie.movie.serviceImpl;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -16,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.FileCopyUtils;
 
 import com.breakmymovie.movie.beans.MoviesInitializer;
+import com.breakmymovie.movie.models.MovieDetailsDTO;
 import com.breakmymovie.movie.service.FileProcessingService_IF;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -35,7 +35,7 @@ public class FileProcessingService implements FileProcessingService_IF {
 	private static final String ROOT_PATH_FOR_CHUNKS_MOVIES_AND_SERIES = "C:/Users/hasingh/Desktop/movieChunks/";
 	private static final String LOCAL_MOVIE_STORAGE_PATH = "C:/Users/hasingh/Desktop/mvs/";
 
-	private String getActualMovieName(String actualMovieName) {
+	private String getActualMovieName(String actualMovieName) throws IOException {
 		MoviesInitializer mv = new MoviesInitializer();
 		List<String> returnMovies = mv.returnMovies();
 		for (String movie : returnMovies) {
@@ -81,16 +81,6 @@ public class FileProcessingService implements FileProcessingService_IF {
 
 	}
 
-	private File createChunkFolderForWebSeries(String particularSeriesRootPath, String episodeName) {
-
-		File episodeBreak = new File(particularSeriesRootPath + File.separator + episodeName + "_Broken");
-
-		episodeBreak.mkdir();
-
-		return episodeBreak;
-
-	}
-
 	public List<String> encodeChunks(File videoFile, MultimediaObject multimediaObject, File movieFolder,
 			String baseMovieName, int chunkDuration, int totalDurationSec, int numChunks, EncodingAttributes baseAttrs)
 			throws EncoderException {
@@ -116,10 +106,10 @@ public class FileProcessingService implements FileProcessingService_IF {
 	}
 
 	@Override
-	public List<String> breakFileAndSaveIt(String actualMovieName, HttpServletRequest request)
-			throws InputFormatException, EncoderException {
+	public List<String> breakFileAndSaveIt(MovieDetailsDTO moviesDetails, HttpServletRequest request)
+			throws InputFormatException, EncoderException, IOException {
 
-		String movieName = getActualMovieName(actualMovieName);
+		String movieName = getActualMovieName(moviesDetails.getSourceVideoName());
 		File[] movieFiles = getMovieFiles(movieName);
 
 		if (movieFiles == null || movieFiles.length == 0) {
@@ -127,7 +117,7 @@ public class FileProcessingService implements FileProcessingService_IF {
 		}
 
 		File videoFile = movieFiles[0];
-		int chunkDuration = 600;
+		int chunkDuration = moviesDetails.getPartDuration();
 
 		MultimediaObject multimediaObject = new MultimediaObject(videoFile);
 		MultimediaInfo info = multimediaObject.getInfo();
@@ -137,7 +127,7 @@ public class FileProcessingService implements FileProcessingService_IF {
 		EncodingAttributes encodingAttributes = prepareEncodingAttributes();
 
 		String baseMovieName = getFileNameWithoutExtension(videoFile.getName());
-		File movieFolder = createChunkFolderForMovie(actualMovieName);
+		File movieFolder = createChunkFolderForMovie(moviesDetails.getSourceVideoName());
 
 		return encodeChunks(videoFile, multimediaObject, movieFolder, baseMovieName, chunkDuration, totalDurationSec,
 				numChunks, encodingAttributes);
@@ -180,5 +170,25 @@ public class FileProcessingService implements FileProcessingService_IF {
 			}
 		}
 		return dir.delete(); // Delete the now-empty folder
+	}
+
+	@Override
+	public List<String> getAllChunks(File file) {
+		// TODO Auto-generated method stub
+
+		File[] listFiles = file.listFiles();
+
+		List<String> chunkNames = new ArrayList<>();
+
+		if(listFiles != null ) 
+		{
+			for (File f : listFiles) {
+
+				if (!f.getName().endsWith(".png"))
+					chunkNames.add(f.getName());
+			}
+			
+		}
+		return chunkNames;
 	}
 }
