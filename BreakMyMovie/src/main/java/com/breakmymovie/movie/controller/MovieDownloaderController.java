@@ -80,7 +80,7 @@ public class MovieDownloaderController {
 		fileProcessingService.deleteDirectory(movie);
 	}
 
-	@GetMapping("/splitFiles/")
+	@PostMapping("/splitFiles/")
 	public void splitFile(@RequestBody MovieDetailsDTO moviesDetails, HttpServletRequest request)
 			throws IOException, IllegalArgumentException, InputFormatException, EncoderException {
 		messageQueueProducer.sendMessage(moviesDetails, request);

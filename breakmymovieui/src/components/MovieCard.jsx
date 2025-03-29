@@ -10,11 +10,14 @@ import {
   Box,
   IconButton,
   Link,
+  Button,
+  Alert,
+  Snackbar,
 } from "@mui/material";
 import { styled } from "@mui/system";
 import { FaChevronDown, FaDownload } from "react-icons/fa";
 import axios from "axios";
-import { getMovieChunks } from "../services/MovieService";
+import { breakMovieAsync, getMovieChunks } from "../services/MovieService";
 
 // Styled components
 const StyledCard = styled(Card)(({ theme }) => ({
@@ -56,12 +59,7 @@ const LinkItem = styled(Link)({
 // Main component
 const MovieCard = ({ movie, parts, setParts, handleBreakIntoParts }) => {
   const [movieChunks, setMovieChunks] = useState([]);
-
-  const handleImageError = (e) => {
-    e.target.src =
-      "https://images.unsplash.com/photo-1555949963-aa79dcee981c?ixlib=rb-4.0.3";
-    e.target.alt = "Fallback development image";
-  };
+  const [open, setOpen] = React.useState(false);
 
   const handleDownload = async (movie) => {
     const data = await getMovieChunks(movie);
@@ -91,82 +89,110 @@ const MovieCard = ({ movie, parts, setParts, handleBreakIntoParts }) => {
     return response;
   };
 
-  return (
-    <StyledCard>
-      <CardMedia
-        component="img"
-        height="200"
-        image="https://images.unsplash.com/photo-1661956602116-aa6865609028?ixlib=rb-4.0.3"
-        alt="Development resources header image"
-        onError={handleImageError}
-        loading="lazy"
-      />
-      <CardContent>
-        <Typography variant="h5" component="h2" gutterBottom>
-          {movie}
-        </Typography>
-        <Typography variant="subtitle1" color="textSecondary" gutterBottom>
-          Curated collection of useful development tools and resources
-        </Typography>
+  const sendVideoToQueue = (movieName, duration) => {
+    const obj = {
+      sourceVideoName: movieName,
+      partDuration: duration,
+    };
+    breakMovieAsync(obj).then((data) => {
+      setOpen(true);
+    });
+  };
+  const handleClose = (reason) => {
+    if (reason === "clickaway") {
+      return;
+    }
 
-        <Box sx={{ mt: 2 }}>
-          <StyledAccordion>
-            <AccordionSummary
-              expandIcon={<FaChevronDown />}
-              onClick={() => handleDownload(movie)}
-            >
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <Typography>Click to see parts of movie</Typography>
-              </Box>
-            </AccordionSummary>
-            <AccordionDetails>
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                {movieChunks.length > 0 ? (
-                  movieChunks.map((link, index) => (
-                    <LinkItem key={index} rel="noopener noreferrer">
-                      <IconButton
-                        size="small"
-                        sx={{ mr: 1 }}
-                        onClick={() =>
-                          handleDownloadPart(
-                            "http://localhost:8080/downloadChunk",
-                            {
-                              movieName: movie,
-                              movieChunk: link,
-                            }
-                          )
-                        }
-                      >
-                        Part {index}
-                      </IconButton>
-                      <Typography>{link.title}</Typography>
-                      <FaDownload
-                        onClick={() =>
-                          handleDownloadPart(
-                            "http://localhost:8080/downloadChunk",
-                            {
-                              movieName: movie,
-                              movieChunk: link,
-                            }
-                          )
-                        }
-                        style={{
-                          marginLeft: "auto",
-                          fontSize: "0.9rem",
-                          cursor: "pointer",
-                        }}
-                      />
-                    </LinkItem>
-                  ))
-                ) : (
-                  <Typography>Nothing to show</Typography>
-                )}
-              </Box>
-            </AccordionDetails>
-          </StyledAccordion>
-        </Box>
-      </CardContent>
-    </StyledCard>
+    setOpen(false);
+  };
+
+  return (
+    <CardContent>
+      <Typography variant="h5" component="h2" gutterBottom>
+        {movie}
+      </Typography>
+      <Typography variant="subtitle1" color="textSecondary" gutterBottom>
+        Curated collection of useful development tools and resources
+      </Typography>
+
+      {/* Break It Button */}
+      <Box sx={{ mt: 2 }}>
+        <Button
+          variant="contained"
+          color="error"
+          onClick={() => sendVideoToQueue(movie, 1800)}
+        >
+          Click to create parts of 30 minutes
+        </Button>
+        <Snackbar open={open} autoHideDuration={6000} onClose={handleClose}>
+          <Alert
+            onClose={handleClose}
+            severity="success"
+            variant="filled"
+            sx={{ width: "100%" }}
+          >
+            You will be notified when your movies is broken into parts
+          </Alert>
+        </Snackbar>
+      </Box>
+
+      <Box sx={{ mt: 2 }}>
+        <StyledAccordion>
+          <AccordionSummary
+            expandIcon={<FaChevronDown />}
+            onClick={() => handleDownload(movie)}
+          >
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <Typography>Click to see parts of movie</Typography>
+            </Box>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+              {movieChunks.length > 0 ? (
+                movieChunks.map((link, index) => (
+                  <LinkItem key={index} rel="noopener noreferrer">
+                    <IconButton
+                      size="small"
+                      sx={{ mr: 1 }}
+                      onClick={() =>
+                        handleDownloadPart(
+                          "http://localhost:8080/downloadChunk",
+                          {
+                            movieName: movie,
+                            movieChunk: link,
+                          }
+                        )
+                      }
+                    >
+                      Part {index}
+                    </IconButton>
+                    <Typography>{link.title}</Typography>
+                    <FaDownload
+                      onClick={() =>
+                        handleDownloadPart(
+                          "http://localhost:8080/downloadChunk",
+                          {
+                            movieName: movie,
+                            movieChunk: link,
+                          }
+                        )
+                      }
+                      style={{
+                        marginLeft: "auto",
+                        fontSize: "0.9rem",
+                        cursor: "pointer",
+                      }}
+                    />
+                  </LinkItem>
+                ))
+              ) : (
+                <Typography>Nothing to show</Typography>
+              )}
+            </Box>
+          </AccordionDetails>
+        </StyledAccordion>
+      </Box>
+    </CardContent>
   );
 };
 

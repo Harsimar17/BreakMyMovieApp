@@ -6,7 +6,6 @@ export const fetchMovies = async (query) => {
     const response = await axios.post(`${BASE_URL}/searchMovie`, {
       sourceVideoName: query,
     });
-
     return response.data;
   } catch (error) {
     console.error("Failed to fetch movies", error);
@@ -15,11 +14,15 @@ export const fetchMovies = async (query) => {
 };
 
 export const getMovieChunks = async (movieName) => {
-  console.log(BASE_URL);
-  
   return axios
     .get(`${BASE_URL}/getAllChunksForMovie/${movieName}`)
     .then((data) => {
       return data.data;
     });
+};
+
+export const breakMovieAsync = async (movieDTO) => {
+  return axios
+    .post(`${BASE_URL}/splitFiles/`, movieDTO)
+    .then((data) => data.data);
 };

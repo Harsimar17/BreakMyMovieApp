@@ -129,8 +129,10 @@ public class FileProcessingService implements FileProcessingService_IF {
 		String baseMovieName = getFileNameWithoutExtension(videoFile.getName());
 		File movieFolder = createChunkFolderForMovie(moviesDetails.getSourceVideoName());
 
-		return encodeChunks(videoFile, multimediaObject, movieFolder, baseMovieName, chunkDuration, totalDurationSec,
+		 List<String> encodeChunks = encodeChunks(videoFile, multimediaObject, movieFolder, baseMovieName, chunkDuration, totalDurationSec,
 				numChunks, encodingAttributes);
+		 
+		 return encodeChunks;
 	}
 
 	@Override
